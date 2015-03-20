@@ -54,7 +54,7 @@ void TfVideoContentHandler::linkVideoPreviewSink(const QGst::ElementPtr & sink)
 
     QString id = tfContent()->property("object-path").toString().section(QLatin1Char('/'), -1);
     QString teeName = QString(QLatin1String("input_tee_%1")).arg(id);
-    QGst::ElementPtr tee = m_srcBin->getElementByName(teeName.toAscii());
+    QGst::ElementPtr tee = m_srcBin->getElementByName(teeName.toLatin1());
 
     QGst::PadPtr srcPad = tee->getRequestPad("src_%u");
     m_videoPreviewBin = new VideoSinkBin(sink);
@@ -71,7 +71,7 @@ void TfVideoContentHandler::unlinkVideoPreviewSink()
 
         QString id = tfContent()->property("object-path").toString().section(QLatin1Char('/'), -1);
         QString teeName = QString(QLatin1String("input_tee_%1")).arg(id);
-        QGst::ElementPtr tee = m_srcBin->getElementByName(teeName.toAscii());
+        QGst::ElementPtr tee = m_srcBin->getElementByName(teeName.toLatin1());
 
         QGst::PadPtr sinkPad = m_videoPreviewBin->bin()->getStaticPad("sink");
         QGst::PadPtr srcPad = sinkPad->peer();
@@ -153,14 +153,14 @@ bool TfVideoContentHandler::createSrcBin(const QGst::ElementPtr & src)
 
     //capsfilter restricts the output to 320x240 @ 15fps or whatever Content.I.VideoControl says
     QString capsfilterName = QString(QLatin1String("input_capsfilter_%1")).arg(id);
-    QGst::ElementPtr capsfilter = QGst::ElementFactory::make("capsfilter", capsfilterName.toAscii());
+    QGst::ElementPtr capsfilter = QGst::ElementFactory::make("capsfilter", capsfilterName.toLatin1());
     capsfilter->setProperty("caps", contentCaps());
 
     qCDebug(KTP_CALL_UI) << "Using video src caps" << capsfilter->property("caps").get<QGst::CapsPtr>();
 
     //tee to support fakesink + fsconference + video preview sink
     QString teeName = QString(QLatin1String("input_tee_%1")).arg(id);
-    QGst::ElementPtr tee = QGst::ElementFactory::make("tee", teeName.toAscii());
+    QGst::ElementPtr tee = QGst::ElementFactory::make("tee", teeName.toLatin1());
 
     //fakesink silently "eats" frames to prevent the source from stopping in case there is no other sink
     QGst::ElementPtr fakesink = QGst::ElementFactory::make("fakesink");
@@ -264,7 +264,7 @@ void TfVideoContentHandler::onRestartSource()
 
         QString id = tfContent()->property("object-path").toString().section(QLatin1Char('/'), -1);
         QString capsfilterName = QString(QLatin1String("input_capsfilter_%1")).arg(id);
-        QGst::ElementPtr capsfilter = m_srcBin->getElementByName(capsfilterName.toAscii());
+        QGst::ElementPtr capsfilter = m_srcBin->getElementByName(capsfilterName.toLatin1());
 
         //stop src bin
         m_srcBin->setStateLocked(true);
