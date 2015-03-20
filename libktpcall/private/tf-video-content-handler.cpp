@@ -20,6 +20,7 @@
 #include "sink-controllers.h"
 #include "device-element-factory.h"
 #include "video-sink-bin.h"
+#include "ktp_call_ui_debug.h"
 
 #include <QGlib/Connect>
 #include <QGst/Clock>
@@ -27,8 +28,6 @@
 #include <QGst/GhostPad>
 #include <QGst/FractionRange>
 #include <QGst/Fraction>
-
-#include <KDebug>
 
 namespace KTpCallPrivate {
 
@@ -46,10 +45,10 @@ TfVideoContentHandler::~TfVideoContentHandler()
 
 void TfVideoContentHandler::linkVideoPreviewSink(const QGst::ElementPtr & sink)
 {
-    kDebug();
+    qCDebug(KTP_CALL_UI);
 
     if (m_videoPreviewBin) {
-        kWarning() << "video preview sink already linked - ignoring new preview sink";
+        qCWarning(KTP_CALL_UI) << "video preview sink already linked - ignoring new preview sink";
         return;
     }
 
@@ -68,7 +67,7 @@ void TfVideoContentHandler::linkVideoPreviewSink(const QGst::ElementPtr & sink)
 void TfVideoContentHandler::unlinkVideoPreviewSink()
 {
     if (m_videoPreviewBin) {
-        kDebug();
+        qCDebug(KTP_CALL_UI);
 
         QString id = tfContent()->property("object-path").toString().section(QLatin1Char('/'), -1);
         QString teeName = QString(QLatin1String("input_tee_%1")).arg(id);
@@ -104,7 +103,7 @@ bool TfVideoContentHandler::startSending()
 {
     QGst::ElementPtr src = DeviceElementFactory::makeVideoCaptureElement();
     if (!src) {
-        kError() << "Could not initialize video capture device";
+        qCCritical(KTP_CALL_UI) << "Could not initialize video capture device";
         return false;
     }
 
@@ -157,7 +156,7 @@ bool TfVideoContentHandler::createSrcBin(const QGst::ElementPtr & src)
     QGst::ElementPtr capsfilter = QGst::ElementFactory::make("capsfilter", capsfilterName.toAscii());
     capsfilter->setProperty("caps", contentCaps());
 
-    kDebug() << "Using video src caps" << capsfilter->property("caps").get<QGst::CapsPtr>();
+    qCDebug(KTP_CALL_UI) << "Using video src caps" << capsfilter->property("caps").get<QGst::CapsPtr>();
 
     //tee to support fakesink + fsconference + video preview sink
     QString teeName = QString(QLatin1String("input_tee_%1")).arg(id);
@@ -174,7 +173,7 @@ bool TfVideoContentHandler::createSrcBin(const QGst::ElementPtr & src)
     QGst::ElementPtr queue = QGst::ElementFactory::make("queue");
 
     if (!videoscale || !colorspace || !capsfilter || !tee || !queue || !fakesink) {
-        kWarning() << "Failed to load basic gstreamer elements";
+        qCWarning(KTP_CALL_UI) << "Failed to load basic gstreamer elements";
         return false;
     }
 
@@ -185,20 +184,20 @@ bool TfVideoContentHandler::createSrcBin(const QGst::ElementPtr & src)
     if (videorate) {
         bin->add(videorate);
         if (!QGst::Element::linkMany(src, videorate, videoscale)) {
-            kWarning() << "Failed to link videosrc ! videorate ! videoscale";
+            qCWarning(KTP_CALL_UI) << "Failed to link videosrc ! videorate ! videoscale";
             return false;
         }
     } else {
-        kDebug() << "NOT using videorate";
+        qCDebug(KTP_CALL_UI) << "NOT using videorate";
         if (!src->link(videoscale)) {
-            kWarning() << "Failed to link videosrc ! videoscale";
+            qCWarning(KTP_CALL_UI) << "Failed to link videosrc ! videoscale";
             return false;
         }
     }
 
     // videoscale ! colorspace ! capsfilter
     if (!QGst::Element::linkMany(videoscale, colorspace, capsfilter)) {
-        kWarning() << "Failed to link videoscale ! colorspace ! capsfilter";
+        qCWarning(KTP_CALL_UI) << "Failed to link videoscale ! colorspace ! capsfilter";
         return false;
     }
 
@@ -208,19 +207,19 @@ bool TfVideoContentHandler::createSrcBin(const QGst::ElementPtr & src)
     // consider investigating alternatives.
 
     if (!capsfilter->link(tee)) {
-        kWarning() << "Failed to link capsfilter ! tee";
+        qCWarning(KTP_CALL_UI) << "Failed to link capsfilter ! tee";
         return false;
     }
 
     // tee ! fakesink
     if (tee->getRequestPad("src_%u")->link(fakesink->getStaticPad("sink")) != QGst::PadLinkOk) {
-        kWarning() << "Failed to link tee ! fakesink";
+        qCWarning(KTP_CALL_UI) << "Failed to link tee ! fakesink";
         return false;
     }
 
     // tee ! queue
     if (tee->getRequestPad("src_%u")->link(queue->getStaticPad("sink")) != QGst::PadLinkOk) {
-        kWarning() << "Failed to link tee ! queue";
+        qCWarning(KTP_CALL_UI) << "Failed to link tee ! queue";
         return false;
     }
 
@@ -261,7 +260,7 @@ void TfVideoContentHandler::onRestartSource()
 {
     if (m_srcBin) {
         QGst::CapsPtr caps = contentCaps();
-        kDebug() << "restarting source with new caps" << caps;
+        qCDebug(KTP_CALL_UI) << "restarting source with new caps" << caps;
 
         QString id = tfContent()->property("object-path").toString().section(QLatin1Char('/'), -1);
         QString capsfilterName = QString(QLatin1String("input_capsfilter_%1")).arg(id);

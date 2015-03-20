@@ -17,10 +17,10 @@
 */
 #include "device-element-factory.h"
 #include "phonon-integration.h"
+#include "../ktp_call_ui_debug.h"
 #include <QGst/Bin>
 #include <QGst/ElementFactory>
 #include <QGst/Structure>
-#include <KDebug>
 #include <KConfig>
 #include <KConfigGroup>
 
@@ -175,7 +175,7 @@ QGst::ElementPtr DeviceElementFactory::tryElement(const char *name, const QStrin
 {
     QGst::ElementPtr element = QGst::ElementFactory::make(name);
     if (!element) {
-        kDebug() << "Could not make element" << name;
+        qCDebug(KTP_CALL_UI) << "Could not make element" << name;
         return element;
     }
 
@@ -183,16 +183,16 @@ QGst::ElementPtr DeviceElementFactory::tryElement(const char *name, const QStrin
         try {
             element->setProperty("device", device);
         } catch (const std::logic_error & error) {
-            kDebug() << "FIXME: Element" << name << "doesn't support string device property";
+            qCDebug(KTP_CALL_UI) << "FIXME: Element" << name << "doesn't support string device property";
         }
     }
 
     if (!element->setState(QGst::StateReady)) {
-        kDebug() << "Element" << name << "with device string" << device << "doesn't want to become ready";
+        qCDebug(KTP_CALL_UI) << "Element" << name << "with device string" << device << "doesn't want to become ready";
         return QGst::ElementPtr();
     }
 
-    kDebug() << "Using element" << name << "with device string" << device;
+    qCDebug(KTP_CALL_UI) << "Using element" << name << "with device string" << device;
     return element;
 }
 
@@ -206,16 +206,16 @@ QGst::ElementPtr DeviceElementFactory::tryOverrideForKey(const char *keyName)
         element = QGst::Bin::fromDescription(binDescription);
 
         if (!element) {
-            kDebug() << "Could not construct bin" << binDescription;
+            qCDebug(KTP_CALL_UI) << "Could not construct bin" << binDescription;
             return element;
         }
 
         if (!element->setState(QGst::StateReady)) {
-            kDebug() << "Custom bin" << binDescription << "doesn't want to become ready";
+            qCDebug(KTP_CALL_UI) << "Custom bin" << binDescription << "doesn't want to become ready";
             return QGst::ElementPtr();
         }
 
-        kDebug() << "Using custom bin" << binDescription;
+        qCDebug(KTP_CALL_UI) << "Using custom bin" << binDescription;
     }
 
     return element;

@@ -17,6 +17,7 @@
 */
 #include "sink-manager.h"
 #include "tf-content-handler.h"
+#include "ktp_call_ui_debug.h"
 
 #include <TelepathyQt/Connection>
 #include <TelepathyQt/ContactManager>
@@ -27,8 +28,6 @@
 #include <QGst/ElementFactory>
 #include <QGst/Pipeline>
 #include <QGst/Pad>
-
-#include <KDebug>
 
 namespace KTpCallPrivate {
 
@@ -46,7 +45,7 @@ void SinkManager::cleanup()
 {
     QMutexLocker l(&m_mutex);
 
-    kDebug() << m_controllers.size() << "pads need unlinking";
+    qCDebug(KTP_CALL_UI) << m_controllers.size() << "pads need unlinking";
 
     /* unlink all pads */
     QHashIterator<QGst::PadPtr, BaseSinkController*> it(m_controllers);
@@ -80,7 +79,7 @@ void SinkManager::cleanup()
 
 void SinkManager::handleNewSinkPad(uint contactHandle, const QGst::PadPtr & pad)
 {
-    kDebug() << "New src pad" << pad->name() << "from handle" << contactHandle;
+    qCDebug(KTP_CALL_UI) << "New src pad" << pad->name() << "from handle" << contactHandle;
 
     //link the pad
     BaseSinkController *ctrl = contentHandler()->createSinkController(pad);
@@ -105,7 +104,7 @@ void SinkManager::handleNewSinkPadAsync(uint contactHandle)
     BaseSinkController *ctrl = m_controllersWaitingForContact.value(contactHandle);
     if (Q_UNLIKELY(!ctrl)) {
         //just in case the pad was unlinked before we reached this slot
-        kDebug() << "Not handling new pad. The pad was unlinked too early.";
+        qCDebug(KTP_CALL_UI) << "Not handling new pad. The pad was unlinked too early.";
         return;
     }
 
@@ -127,13 +126,13 @@ void SinkManager::onPendingContactsFinished(Tp::PendingOperation *op)
     BaseSinkController *ctrl = m_controllersWaitingForContact.value(contactHandle);
     if (Q_UNLIKELY(!ctrl)) {
         // just in case the pad was unlinked before we reached this slot
-        kDebug() << "Not handling new pad. The pad was unlinked too early.";
+        qCDebug(KTP_CALL_UI) << "Not handling new pad. The pad was unlinked too early.";
         return;
     }
 
     // this can't really fail because the contact is already known
     if (Q_UNLIKELY(pc->isError())) {
-        kError() << "Failed to fetch contact for handle" << contactHandle
+        qCCritical(KTP_CALL_UI) << "Failed to fetch contact for handle" << contactHandle
                  << op->errorName() << op->errorMessage();
         m_controllersWaitingForContact.remove(contactHandle);
         return;
@@ -151,15 +150,15 @@ void SinkManager::onPadUnlinked(const QGst::PadPtr & srcPad)
 {
     QMutexLocker l(&m_mutex);
 
-    kDebug() << srcPad->name() << "was unlinked.";
-    kDebug() << "Current thread:" << QThread::currentThread()
+    qCDebug(KTP_CALL_UI) << srcPad->name() << "was unlinked.";
+    qCDebug(KTP_CALL_UI) << "Current thread:" << QThread::currentThread()
              << "Main thread:" << QCoreApplication::instance()->thread();
 
     BaseSinkController *ctrl = m_controllers.value(srcPad);
 
     if (Q_UNLIKELY(!ctrl)) {
         //just in case unlinkAllPads() locked the mutex first...
-        kDebug() << "Looks like unlinkAllPads() wins...";
+        qCDebug(KTP_CALL_UI) << "Looks like unlinkAllPads() wins...";
         return;
     }
 

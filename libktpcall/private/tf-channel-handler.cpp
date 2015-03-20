@@ -18,13 +18,12 @@
 
 #include "tf-channel-handler.h"
 #include "tf-content-handler.h"
+#include "ktp_call_ui_debug.h"
 
 #include <QGlib/Error>
 #include <QGlib/Connect>
 #include <QGst/Init>
 #include <QGst/Bus>
-
-#include <KDebug>
 
 namespace KTpCallPrivate {
 
@@ -62,7 +61,7 @@ void TfChannelHandler::init()
         QGst::init();
         QTf::init();
     } catch (const QGlib::Error & error) {
-        kError() << error;
+        qCCritical(KTP_CALL_UI) << error;
         m_callChannel->hangup(Tp::CallStateChangeReasonInternalError,
                               TP_QT_ERROR_MEDIA_STREAMING_ERROR,
                               error.message());
@@ -78,14 +77,14 @@ void TfChannelHandler::init()
 void TfChannelHandler::onPendingTfChannelFinished(Tp::PendingOperation *op)
 {
     if (op->isError()) {
-        kError() << op->errorMessage();
+        qCCritical(KTP_CALL_UI) << op->errorMessage();
         m_callChannel->hangup(Tp::CallStateChangeReasonInternalError,
                               TP_QT_ERROR_MEDIA_STREAMING_ERROR,
                               op->errorMessage());
         return;
     }
 
-    kDebug() << "TfChannel ready";
+    qCDebug(KTP_CALL_UI) << "TfChannel ready";
     m_tfChannel = qobject_cast<QTf::PendingChannel*>(op)->channel();
     m_channelClosedCounter--; // from this point on, we also need to wait for TfChannel to close
 
@@ -109,17 +108,17 @@ void TfChannelHandler::onPendingTfChannelFinished(Tp::PendingOperation *op)
 
 void TfChannelHandler::onCallChannelInvalidated()
 {
-    kDebug() << "Tp::Channel invalidated";
+    qCDebug(KTP_CALL_UI) << "Tp::Channel invalidated";
 
     if (++m_channelClosedCounter == 2) {
-        kDebug() << "emit channelClosed()";
+        qCDebug(KTP_CALL_UI) << "emit channelClosed()";
         Q_EMIT channelClosed();
     }
 }
 
 void TfChannelHandler::onTfChannelClosed()
 {
-    kDebug() << "TfChannel closed";
+    qCDebug(KTP_CALL_UI) << "TfChannel closed";
 
     Q_ASSERT(m_pipeline);
     m_pipeline->bus()->removeSignalWatch();
@@ -127,14 +126,14 @@ void TfChannelHandler::onTfChannelClosed()
     m_fsElementAddedNotifiers.clear();
 
     if (++m_channelClosedCounter == 2) {
-        kDebug() << "emit channelClosed()";
+        qCDebug(KTP_CALL_UI) << "emit channelClosed()";
         Q_EMIT channelClosed();
     }
 }
 
 void TfChannelHandler::onContentAdded(const QTf::ContentPtr & tfContent)
 {
-    kDebug() << "TfContent added:" << tfContent->property("object-path").toString();
+    qCDebug(KTP_CALL_UI) << "TfContent added:" << tfContent->property("object-path").toString();
 
     TfContentHandler *contentHandler = m_factory->createContentHandler(tfContent, this);
 
@@ -144,7 +143,7 @@ void TfChannelHandler::onContentAdded(const QTf::ContentPtr & tfContent)
 
 void TfChannelHandler::onContentRemoved(const QTf::ContentPtr & tfContent)
 {
-    kDebug() << "TfContent removed:" << tfContent->property("object-path").toString();
+    qCDebug(KTP_CALL_UI) << "TfContent removed:" << tfContent->property("object-path").toString();
 
     TfContentHandler *contentHandler = m_contents.take(tfContent);
     contentHandler->cleanup();
@@ -154,7 +153,7 @@ void TfChannelHandler::onContentRemoved(const QTf::ContentPtr & tfContent)
 
 void TfChannelHandler::onFsConferenceAdded(const QGst::ElementPtr & conference)
 {
-    kDebug() << "Adding fsconference in the pipeline";
+    qCDebug(KTP_CALL_UI) << "Adding fsconference in the pipeline";
     m_fsElementAddedNotifiers.append(QTf::loadFsElementAddedNotifier(conference, m_pipeline));
     m_pipeline->add(conference);
     conference->syncStateWithParent();
@@ -162,7 +161,7 @@ void TfChannelHandler::onFsConferenceAdded(const QGst::ElementPtr & conference)
 
 void TfChannelHandler::onFsConferenceRemoved(const QGst::ElementPtr & conference)
 {
-    kDebug() << "Removing fsconference from the pipeline";
+    qCDebug(KTP_CALL_UI) << "Removing fsconference from the pipeline";
     m_pipeline->remove(conference);
     conference->setState(QGst::StateNull);
 }

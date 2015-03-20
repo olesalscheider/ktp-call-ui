@@ -18,10 +18,10 @@
 
 #include "tf-content-handler.h"
 #include "sink-manager.h"
+#include "ktp_call_ui_debug.h"
 
 #include <QGlib/Connect>
 #include <TelepathyQt/ReferencedHandles>
-#include <KDebug>
 
 namespace KTpCallPrivate {
 
@@ -30,7 +30,7 @@ TfContentHandler::TfContentHandler(const QTf::ContentPtr & tfContent, TfChannelH
       m_tfContent(tfContent),
       m_sending(false)
 {
-    kDebug();
+    qCDebug(KTP_CALL_UI);
 
     QGlib::connect(m_tfContent, "src-pad-added", this, &TfContentHandler::onSrcPadAdded);
     QGlib::connect(m_tfContent, "start-sending", this, &TfContentHandler::onStartSending);
@@ -49,7 +49,7 @@ TfContentHandler::TfContentHandler(const QTf::ContentPtr & tfContent, TfChannelH
 
 TfContentHandler::~TfContentHandler()
 {
-    kDebug();
+    qCDebug(KTP_CALL_UI);
     delete m_sinkManager;
 }
 
@@ -65,9 +65,9 @@ BaseSinkController *TfContentHandler::sinkController(const Tp::ContactPtr& conta
 
 void TfContentHandler::cleanup()
 {
-    kDebug();
+    qCDebug(KTP_CALL_UI);
     if (m_sending) {
-        kDebug() << "Cleanup detected we are still sending - stopping sending";
+        qCDebug(KTP_CALL_UI) << "Cleanup detected we are still sending - stopping sending";
         stopSending();
         m_sending = false;
         Q_EMIT localSendingStateChanged(false);
@@ -85,11 +85,11 @@ void TfContentHandler::onSrcPadAdded(uint contactHandle,
 
 bool TfContentHandler::onStartSending()
 {
-    kDebug() << "Start sending requested";
+    qCDebug(KTP_CALL_UI) << "Start sending requested";
 
     bool success = startSending();
     if (success) {
-        kDebug() << "Started sending successfully";
+        qCDebug(KTP_CALL_UI) << "Started sending successfully";
         m_sending = true;
         Q_EMIT localSendingStateChanged(true);
     }
@@ -98,10 +98,10 @@ bool TfContentHandler::onStartSending()
 
 void TfContentHandler::onStopSending()
 {
-    kDebug() << "Stop sending requested";
+    qCDebug(KTP_CALL_UI) << "Stop sending requested";
 
     if (m_sending) {
-        kDebug() << "Stopping sending";
+        qCDebug(KTP_CALL_UI) << "Stopping sending";
         stopSending();
         m_sending = false;
         Q_EMIT localSendingStateChanged(false);
@@ -110,7 +110,7 @@ void TfContentHandler::onStopSending()
 
 bool TfContentHandler::onStartReceiving(void *handles, uint handleCount)
 {
-    kDebug() << "Start receiving requested";
+    qCDebug(KTP_CALL_UI) << "Start receiving requested";
 
     uint *ihandles = reinterpret_cast<uint*>(handles);
     for (uint i = 0; i < handleCount; ++i) {
@@ -120,7 +120,7 @@ bool TfContentHandler::onStartReceiving(void *handles, uint handleCount)
 
             //if we are not already receiving
             if (!m_sinkControllers[contact].second) {
-                kDebug() << "Starting receiving from" << contact->id();
+                qCDebug(KTP_CALL_UI) << "Starting receiving from" << contact->id();
 
                 m_sinkControllers[contact].second = true;
                 Q_EMIT remoteSendingStateChanged(contact, true);
@@ -132,7 +132,7 @@ bool TfContentHandler::onStartReceiving(void *handles, uint handleCount)
 
 void TfContentHandler::onStopReceiving(void *handles, uint handleCount)
 {
-    kDebug() << "Stop receiving requested";
+    qCDebug(KTP_CALL_UI) << "Stop receiving requested";
 
     uint *ihandles = reinterpret_cast<uint*>(handles);
     for (uint i = 0; i < handleCount; ++i) {
@@ -142,7 +142,7 @@ void TfContentHandler::onStopReceiving(void *handles, uint handleCount)
 
             //if we are receiving
             if (m_sinkControllers[contact].second) {
-                kDebug() << "Stopping receiving from" << contact->id();
+                qCDebug(KTP_CALL_UI) << "Stopping receiving from" << contact->id();
 
                 m_sinkControllers[contact].second = false;
                 Q_EMIT remoteSendingStateChanged(contact, false);
@@ -153,7 +153,7 @@ void TfContentHandler::onStopReceiving(void *handles, uint handleCount)
 
 void TfContentHandler::onControllerCreated(BaseSinkController *controller)
 {
-    kDebug() << "Sink controller created. Contact:" << controller->contact()->id()
+    qCDebug(KTP_CALL_UI) << "Sink controller created. Contact:" << controller->contact()->id()
              << "media-type:" << m_tfContent->property("media-type").toInt();
 
     m_sinkControllers.insert(controller->contact(), qMakePair(controller, true));
@@ -164,7 +164,7 @@ void TfContentHandler::onControllerCreated(BaseSinkController *controller)
 
 void TfContentHandler::onControllerDestroyed(BaseSinkController *controller)
 {
-    kDebug() << "Sink controller destroyed. Contact:" << controller->contact()->id()
+    qCDebug(KTP_CALL_UI) << "Sink controller destroyed. Contact:" << controller->contact()->id()
              << "media-type:" << m_tfContent->property("media-type").toInt();
 
     bool wasReceiving = m_sinkControllers.take(controller->contact()).second;
@@ -190,7 +190,7 @@ void TfContentHandler::findCallContent()
     // with tp-glib and therefore the Tp::CallContent may not be available when the
     // TfContent appears. Here, we wait for tp-qt to synchronize.
 
-    kDebug() << "CallContent not found. Waiting for tp-qt to synchronize with d-bus.";
+    qCDebug(KTP_CALL_UI) << "CallContent not found. Waiting for tp-qt to synchronize with d-bus.";
     connect(channelHandler()->callChannel().data(),
             SIGNAL(contentAdded(Tp::CallContentPtr)),
             SLOT(onContentAdded(Tp::CallContentPtr)));
